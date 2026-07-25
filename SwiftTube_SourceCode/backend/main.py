@@ -114,6 +114,7 @@ async def get_info(req: InfoRequest):
         'skip_download': True,
         'quiet': True,
         'no_warnings': True,
+        'extractor_args': {'youtube': ['player_client=android,web']},
     }
     
     if platform in ['instagram', 'facebook']:
@@ -205,7 +206,8 @@ async def download_file(background_tasks: BackgroundTasks, url: str, type: str =
         'outtmpl': tmp_path,
         'quiet': True,
         'no_warnings': True,
-        'nocheckcertificate': True
+        'nocheckcertificate': True,
+        'extractor_args': {'youtube': ['player_client=android,web']},
     }
     
     if start and end:
@@ -239,6 +241,7 @@ async def download_gif(background_tasks: BackgroundTasks, url: str, title: str =
         'format': 'best[height<=480]',
         'outtmpl': tmp_vid,
         'quiet': True,
+        'extractor_args': {'youtube': ['player_client=android,web']},
     }
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
