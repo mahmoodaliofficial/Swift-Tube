@@ -89,7 +89,7 @@ export function TrendingSection() {
     // This gives the illusion of a live daily feed updating every 24 hours
     const today = Math.floor(Date.now() / (1000 * 60 * 60 * 24));
     const startIndex = (today * 4) % TRENDING.length;
-    const rotated = [];
+    const rotated: any = [];
     
     for (let i = 0; i < 4; i++) {
       rotated.push(TRENDING[(startIndex + i) % TRENDING.length]);
