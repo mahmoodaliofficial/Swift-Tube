@@ -1,0 +1,188 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+@layer base {
+  :root {
+    /* Dynamic Theme Colors (Default: Cyan/Violet/Fuchsia) */
+    --theme-color-1: #00f3ff;
+    --theme-color-2: #8a2be2;
+    --theme-color-3: #ff00ff;
+    --theme-color-4: #3b82f6;
+    --theme-color-5: #ec4899;
+
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 142.1 76.2% 36.3%;
+    --primary-foreground: 355.7 100% 97.3%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 142 60% 95%;
+    --accent-foreground: 142.1 76.2% 36.3%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 142.1 76.2% 36.3%;
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 222 25% 7%;
+    --foreground: 210 40% 98%;
+    --card: 222 23% 10%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 23% 10%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 142.1 70.6% 45.3%;
+    --primary-foreground: 144.9 80.4% 10%;
+    --secondary: 222 20% 16%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 222 20% 16%;
+    --muted-foreground: 215 20.2% 55.1%;
+    --accent: 222 20% 18%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 222 20% 18%;
+    --input: 222 20% 18%;
+    --ring: 142.4 71.8% 29.2%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-border rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/40;
+  }
+
+  /* Selection */
+  ::selection {
+    background: hsl(142.1 70.6% 45.3% / 0.3);
+    color: hsl(var(--foreground));
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Shimmer loading skeleton */
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--secondary)) 25%,
+      hsl(var(--muted)) 50%,
+      hsl(var(--secondary)) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+
+  /* Premium Glass effect */
+  .glass {
+    @apply backdrop-blur-2xl bg-black/40 border border-white/10;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  }
+
+  /* Neon glows */
+  .glow-cyan {
+    box-shadow: 0 0 20px color-mix(in srgb, var(--theme-color-1) 30%, transparent),
+                0 0 40px color-mix(in srgb, var(--theme-color-1) 10%, transparent);
+  }
+  
+  .glow-fuchsia {
+    box-shadow: 0 0 20px color-mix(in srgb, var(--theme-color-3) 30%, transparent),
+                0 0 40px color-mix(in srgb, var(--theme-color-3) 10%, transparent);
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    @apply bg-gradient-to-r from-neon-cyan via-neon-violet to-neon-fuchsia bg-clip-text text-transparent;
+  }
+
+  .animation-delay-2000 {
+    animation-delay: 2s;
+  }
+  
+  .animation-delay-4000 {
+    animation-delay: 4s;
+  }
+}
+
+/* Custom animations */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in {
+  from { opacity: 0; transform: translateX(-16px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 hsl(142.1 70.6% 45.3% / 0.4); }
+  70% { box-shadow: 0 0 0 10px hsl(142.1 70.6% 45.3% / 0); }
+  100% { box-shadow: 0 0 0 0 hsl(142.1 70.6% 45.3% / 0); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.4s ease-out both;
+}
+
+.animate-slide-in {
+  animation: slide-in 0.4s ease-out both;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Stagger children */
+.stagger > *:nth-child(1) { animation-delay: 0ms; }
+.stagger > *:nth-child(2) { animation-delay: 80ms; }
+.stagger > *:nth-child(3) { animation-delay: 160ms; }
+.stagger > *:nth-child(4) { animation-delay: 240ms; }
+.stagger > *:nth-child(5) { animation-delay: 320ms; }
