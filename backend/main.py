@@ -163,14 +163,12 @@ def remove_file(path: str):
 async def get_youtube_info(url: str, video_id: str) -> dict:
     """Get YouTube video info via yt-dlp using android client to bypass blocks."""
     ydl_opts = {
-        'format': 'best',
         'quiet': True,
         'no_warnings': True,
         'skip_download': True,
         'socket_timeout': 15,
         'retries': 3,
-        'geo_bypass': True,
-        'extractor_args': {'youtube': {'player_client': ['ios', 'android', 'tv', 'web']}}
+        'geo_bypass': True
     }
     
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -407,8 +405,7 @@ async def download_file(
         'nocheckcertificate': True,
         'socket_timeout': 30,
         'retries': 5,
-        'geo_bypass': True,
-        'extractor_args': {'youtube': {'player_client': ['ios', 'android', 'tv', 'web']}}
+        'geo_bypass': True
     }
 
     if start and end:
