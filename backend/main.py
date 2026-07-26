@@ -163,6 +163,7 @@ def remove_file(path: str):
 async def get_youtube_info(url: str, video_id: str) -> dict:
     """Get YouTube video info via yt-dlp using android client to bypass blocks."""
     ydl_opts = {
+        'format': 'best',
         'quiet': True,
         'no_warnings': True,
         'skip_download': True,
