@@ -12,6 +12,9 @@ import urllib.request
 import urllib.parse
 import json
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+COOKIE_FILE = os.path.join(BASE_DIR, 'youtube_cookies.txt')
+
 app = FastAPI(title="SwiftSave Backend")
 
 # Allow CORS for Next.js frontend
@@ -169,7 +172,7 @@ async def get_youtube_info(url: str, video_id: str) -> dict:
         'socket_timeout': 15,
         'retries': 3,
         'geo_bypass': True,
-        'cookiefile': 'youtube_cookies.txt'
+        'cookiefile': COOKIE_FILE
     }
     
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -407,7 +410,7 @@ async def download_file(
         'socket_timeout': 30,
         'retries': 5,
         'geo_bypass': True,
-        'cookiefile': 'youtube_cookies.txt'
+        'cookiefile': COOKIE_FILE
     }
 
     if start and end:
