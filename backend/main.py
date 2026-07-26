@@ -168,7 +168,8 @@ async def get_youtube_info(url: str, video_id: str) -> dict:
         'skip_download': True,
         'socket_timeout': 15,
         'retries': 3,
-        'geo_bypass': True
+        'geo_bypass': True,
+        'cookiefile': 'youtube_cookies.txt'
     }
     
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -405,7 +406,8 @@ async def download_file(
         'nocheckcertificate': True,
         'socket_timeout': 30,
         'retries': 5,
-        'geo_bypass': True
+        'geo_bypass': True,
+        'cookiefile': 'youtube_cookies.txt'
     }
 
     if start and end:
