@@ -158,155 +158,51 @@ def remove_file(path: str):
         pass
 
 
-# ─── Piped API for YouTube ───────────────────────────────
-
-def piped_fetch(video_id: str) -> dict:
-    """Try multiple Piped instances to get YouTube video info."""
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'application/json',
-    }
-    last_error = None
-    for instance in PIPED_INSTANCES:
-        try:
-            api_url = f"{instance}/streams/{video_id}"
-            req = urllib.request.Request(api_url, headers=headers)
-            with urllib.request.urlopen(req, timeout=15) as resp:
-                if resp.status == 200:
-                    data = json.loads(resp.read().decode('utf-8'))
-                    if data.get('title'):
-                        return data
-        except Exception as e:
-            last_error = e
-            continue
-    raise Exception(f"All Piped instances failed. Last error: {last_error}")
-
-
-def piped_to_formats(data: dict) -> list:
-    """Convert Piped API response to our format structure."""
-    formats = []
-
-    # Video streams (these may be video-only DASH)
-    for s in data.get('videoStreams', []):
-        height = s.get('height', 0)
-        fps = s.get('fps', 30)
-        is_video_only = s.get('videoOnly', False)
-        ext_raw = (s.get('format', '') or '').upper()
-        mime = s.get('mimeType', '')
-
-        if 'mp4' in mime or 'MP4' in ext_raw or 'MPEG' in ext_raw:
-            ext = 'mp4'
-        elif 'webm' in mime or 'WEBM' in ext_raw:
-            ext = 'webm'
-        else:
-            ext = 'mp4'
-
-        if is_video_only:
-            type_ = 'video'
-            label = f"{height}p {ext.upper()} (video only)"
-        else:
-            type_ = 'video+audio'
-            label = f"{height}p {ext.upper()}"
-
-        if fps and fps > 30:
-            label += f" {fps}fps"
-
-        quality = (height or 0) * 10 + ((fps or 30) / 10)
-        content_length = None
-        try:
-            content_length = int(s.get('contentLength', 0)) or None
-        except:
-            pass
-
-        formats.append({
-            "formatId": s.get('itag', str(height)),
-            "ext": ext,
-            "resolution": f"{height}p" if height else 'unknown',
-            "fps": fps,
-            "filesize": content_length,
-            "filesizeApprox": content_length,
-            "vcodec": s.get('codec', 'avc1'),
-            "acodec": 'none' if is_video_only else 'mp4a',
-            "abr": None,
-            "tbr": (s.get('bitrate', 0) or 0) // 1000 or None,
-            "label": label,
-            "type": type_,
-            "quality": quality,
-            "directUrl": s.get('url', ''),
-        })
-
-    # Audio streams
-    for s in data.get('audioStreams', []):
-        mime = s.get('mimeType', '')
-        quality_str = s.get('quality', '')
-
-        if 'mp4' in mime or 'm4a' in mime:
-            ext = 'm4a'
-        elif 'webm' in mime or 'opus' in mime:
-            ext = 'webm'
-        else:
-            ext = 'm4a'
-
-        bitrate = (s.get('bitrate', 0) or 0) // 1000
-        content_length = None
-        try:
-            content_length = int(s.get('contentLength', 0)) or None
-        except:
-            pass
-
-        formats.append({
-            "formatId": s.get('itag', f"audio-{bitrate}"),
-            "ext": ext,
-            "resolution": "audio",
-            "fps": None,
-            "filesize": content_length,
-            "filesizeApprox": content_length,
-            "vcodec": "none",
-            "acodec": s.get('codec', 'mp4a'),
-            "abr": bitrate or None,
-            "tbr": bitrate or None,
-            "label": f"{bitrate}kbps {ext.upper()}" if bitrate else f"{ext.upper()} audio",
-            "type": "audio",
-            "quality": bitrate or 0,
-            "directUrl": s.get('url', ''),
-        })
-
-    return formats
-
+# ─── yt-dlp for YouTube ───────────────────────────────
 
 async def get_youtube_info(url: str, video_id: str) -> dict:
-    """Get YouTube video info via Piped API."""
-    data = piped_fetch(video_id)
-
-    formats = piped_to_formats(data)
-    formats.sort(key=lambda x: x['quality'], reverse=True)
-
-    thumb = data.get('thumbnailUrl', '')
-    if not thumb and video_id:
-        thumb = f"https://i.ytimg.com/vi/{video_id}/maxresdefault.jpg"
-
-    duration = data.get('duration', 0)
-
-    return {
-        "id": video_id,
-        "title": data.get('title', 'Untitled'),
-        "description": data.get('description', ''),
-        "duration": duration,
-        "durationFormatted": format_duration(duration),
-        "thumbnail": thumb,
-        "channel": data.get('uploader', '') or data.get('uploaderName', '') or 'Unknown',
-        "channelId": (data.get('uploaderUrl', '') or '').split('/')[-1] if data.get('uploaderUrl') else '',
-        "viewCount": data.get('views', 0) or 0,
-        "viewCountFormatted": format_view_count(data.get('views', 0)),
-        "likeCount": data.get('likes'),
-        "uploadDate": data.get('uploadDate', '') or '',
-        "formats": formats,
-        "subtitles": [],
-        "originalUrl": url,
-        "webpage_url": f"https://www.youtube.com/watch?v={video_id}",
-        "platform": "youtube",
-        "platformName": "YouTube",
+    """Get YouTube video info via yt-dlp using android client to bypass blocks."""
+    ydl_opts = {
+        'skip_download': True,
+        'quiet': True,
+        'no_warnings': True,
+        'nocheckcertificate': True,
+        'socket_timeout': 15,
+        'retries': 3,
+        'extractor_args': {'youtube': {'player_client': ['android']}}
     }
+    
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        raw = ydl.extract_info(url, download=False)
+        
+        formats = [map_format(f) for f in raw.get('formats', [])]
+        formats = [f for f in formats if f is not None]
+        formats.sort(key=lambda x: x['quality'], reverse=True)
+        
+        thumb = raw.get('thumbnail')
+        if not thumb and video_id:
+            thumb = f"https://i.ytimg.com/vi/{video_id}/maxresdefault.jpg"
+            
+        return {
+            "id": raw.get('id', video_id),
+            "title": raw.get('title', 'Untitled'),
+            "description": raw.get('description', ''),
+            "duration": raw.get('duration', 0) or 0,
+            "durationFormatted": format_duration(raw.get('duration', 0)),
+            "thumbnail": thumb,
+            "channel": raw.get('uploader') or raw.get('channel') or raw.get('creator') or 'Unknown',
+            "channelId": raw.get('channel_id') or raw.get('uploader_id') or '',
+            "viewCount": raw.get('view_count', 0) or 0,
+            "viewCountFormatted": format_view_count(raw.get('view_count', 0)),
+            "likeCount": raw.get('like_count'),
+            "uploadDate": raw.get('upload_date', ''),
+            "formats": formats,
+            "subtitles": [],
+            "originalUrl": url,
+            "webpage_url": raw.get('webpage_url', url),
+            "platform": "youtube",
+            "platformName": "YouTube",
+        }
 
 
 # ─── yt-dlp for non-YouTube platforms ────────────────────
@@ -488,67 +384,6 @@ async def download_file(
 ):
     platform = detect_platform(url)
 
-    # ── For YouTube: use Piped proxy URLs (direct redirect) ──
-    if platform == 'youtube' and not direct_url:
-        video_id = extract_youtube_id(url)
-        if video_id:
-            try:
-                data = piped_fetch(video_id)
-
-                # Find best matching stream
-                target_url = None
-
-                if type == 'audio':
-                    # Get best audio stream (prefer m4a)
-                    audio_streams = data.get('audioStreams', [])
-                    m4a_streams = [s for s in audio_streams if 'mp4' in (s.get('mimeType', '') or '')]
-                    best_audio = sorted(
-                        m4a_streams or audio_streams,
-                        key=lambda s: s.get('bitrate', 0) or 0,
-                        reverse=True
-                    )
-                    if best_audio:
-                        target_url = best_audio[0].get('url')
-                else:
-                    # Get best video stream (prefer mp4 with audio)
-                    video_streams = data.get('videoStreams', [])
-
-                    # First try: combined video+audio streams (not video-only)
-                    combined = [s for s in video_streams if not s.get('videoOnly', False)]
-                    if height:
-                        try:
-                            h = int(height)
-                            combined = [s for s in combined if (s.get('height', 0) or 0) <= h]
-                        except:
-                            pass
-
-                    mp4_combined = [s for s in combined if 'mp4' in (s.get('mimeType', '') or '')]
-                    best = sorted(
-                        mp4_combined or combined,
-                        key=lambda s: (s.get('height', 0) or 0),
-                        reverse=True
-                    )
-                    if best:
-                        target_url = best[0].get('url')
-                    else:
-                        # Fallback: any video stream
-                        all_sorted = sorted(
-                            video_streams,
-                            key=lambda s: (s.get('height', 0) or 0),
-                            reverse=True
-                        )
-                        if all_sorted:
-                            target_url = all_sorted[0].get('url')
-
-                if target_url:
-                    return RedirectResponse(url=target_url, status_code=302)
-                else:
-                    return JSONResponse({"error": "No suitable stream found."}, status_code=404)
-
-            except Exception as e:
-                return JSONResponse({"error": f"YouTube download failed: {str(e)[:200]}"}, status_code=500)
-
-    # ── For non-YouTube: use yt-dlp ──
     if format:
         resolved_format = format
     elif type == 'audio':
@@ -569,6 +404,9 @@ async def download_file(
         'quiet': True,
         'no_warnings': True,
         'nocheckcertificate': True,
+        'socket_timeout': 30,
+        'retries': 5,
+        'extractor_args': {'youtube': {'player_client': ['android']}}
     }
 
     if start and end:
