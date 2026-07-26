@@ -165,7 +165,6 @@ async def get_youtube_info(url: str, video_id: str) -> dict:
     ydl_opts = {
         'quiet': True,
         'no_warnings': True,
-        'extract_flat': True,
         'skip_download': True,
         'socket_timeout': 15,
         'retries': 3,
