@@ -38,13 +38,16 @@ export default function Home() {
       let qualityLabel = '';
 
       if (type === 'best-video') {
-        downloadUrl = `${apiBase}/api/download?url=${encodeURIComponent(url)}&type=video&title=${encodeURIComponent(title)}`;
+        const direct = videoInfo.formats.find((f) => f.directUrl)?.directUrl;
+        downloadUrl = `${apiBase}/api/download?url=${encodeURIComponent(url)}&type=video&title=${encodeURIComponent(title)}${direct ? `&direct_url=${encodeURIComponent(direct)}` : ''}`;
         qualityLabel = 'Best Video';
       } else if (type === 'best-audio') {
-        downloadUrl = `${apiBase}/api/download?url=${encodeURIComponent(url)}&type=audio&title=${encodeURIComponent(title)}`;
+        const directAudio = videoInfo.formats.find((f) => f.type === 'audio' && f.directUrl)?.directUrl;
+        downloadUrl = `${apiBase}/api/download?url=${encodeURIComponent(url)}&type=audio&title=${encodeURIComponent(title)}${directAudio ? `&direct_url=${encodeURIComponent(directAudio)}` : ''}`;
         qualityLabel = 'Best Audio';
       } else if (format) {
-        downloadUrl = `${apiBase}/api/download?url=${encodeURIComponent(url)}&format=${encodeURIComponent(format.formatId)}&title=${encodeURIComponent(title)}`;
+        const direct = format.directUrl;
+        downloadUrl = `${apiBase}/api/download?url=${encodeURIComponent(url)}&format=${encodeURIComponent(format.formatId)}&title=${encodeURIComponent(title)}${direct ? `&direct_url=${encodeURIComponent(direct)}` : ''}`;
         qualityLabel = format.label;
       }
 

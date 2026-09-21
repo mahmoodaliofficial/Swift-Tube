@@ -172,8 +172,9 @@ async def get_youtube_info(url: str, video_id: str) -> dict:
         'socket_timeout': 15,
         'retries': 3,
         'geo_bypass': True,
-        'cookiefile': COOKIE_FILE
     }
+    if os.path.exists(COOKIE_FILE):
+        ydl_opts['cookiefile'] = COOKIE_FILE
     
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         raw = ydl.extract_info(url, download=False)
@@ -332,6 +333,85 @@ async def get_generic_info(url: str, platform: str) -> dict:
         }
 
 
+def get_tiktok_info(url: str) -> dict:
+    """Extract TikTok video info via TikWM API (bypasses datacenter blocks and removes watermark)."""
+    encoded_url = urllib.parse.quote(url, safe='')
+    req = urllib.request.Request(
+        f"https://tikwm.com/api/?url={encoded_url}",
+        headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+    )
+    with urllib.request.urlopen(req, timeout=12) as resp:
+        res = json.loads(resp.read().decode('utf-8'))
+
+    if res.get('code') != 0 or 'data' not in res:
+        raise Exception(res.get('msg', 'Failed to fetch TikTok video'))
+
+    data = res['data']
+    video_url = data.get('play') or data.get('wmplay')
+    music_url = data.get('music')
+    duration = data.get('duration', 0)
+    title = data.get('title', 'TikTok Video') or 'TikTok Video'
+    thumb = data.get('cover') or data.get('origin_cover') or ''
+    author = data.get('author', {}).get('nickname') or data.get('author', {}).get('unique_id') or 'TikTok User'
+
+    formats = []
+    if video_url:
+        formats.append({
+            "formatId": "hd_nowm",
+            "ext": "mp4",
+            "resolution": "HD (No Watermark)",
+            "fps": 30,
+            "filesize": data.get('size'),
+            "filesizeApprox": data.get('size'),
+            "vcodec": "h264",
+            "acodec": "aac",
+            "abr": 128,
+            "tbr": None,
+            "label": "HD MP4 (No Watermark)",
+            "type": "video+audio",
+            "quality": 1080,
+            "directUrl": video_url,
+        })
+    if music_url:
+        formats.append({
+            "formatId": "audio_mp3",
+            "ext": "mp3",
+            "resolution": "Audio Only",
+            "fps": None,
+            "filesize": None,
+            "filesizeApprox": None,
+            "vcodec": "none",
+            "acodec": "mp3",
+            "abr": 128,
+            "tbr": 128,
+            "label": "MP3 Audio",
+            "type": "audio",
+            "quality": 128,
+            "directUrl": music_url,
+        })
+
+    return {
+        "id": str(data.get('id', '')),
+        "title": title,
+        "description": title,
+        "duration": duration,
+        "durationFormatted": format_duration(duration),
+        "thumbnail": thumb,
+        "channel": author,
+        "channelId": data.get('author', {}).get('unique_id', ''),
+        "viewCount": data.get('play_count', 0),
+        "viewCountFormatted": format_view_count(data.get('play_count', 0)),
+        "likeCount": data.get('digg_count'),
+        "uploadDate": "",
+        "formats": formats,
+        "subtitles": [],
+        "originalUrl": url,
+        "webpage_url": url,
+        "platform": "tiktok",
+        "platformName": "TikTok",
+    }
+
+
 # ─── API Routes ─────────────────────────────────────────
 
 @app.get("/")
@@ -353,6 +433,11 @@ async def get_info(req: InfoRequest):
                     status_code=400
                 )
             info = await get_youtube_info(url, video_id)
+        elif platform == 'tiktok':
+            try:
+                info = get_tiktok_info(url)
+            except Exception:
+                info = await get_generic_info(url, platform)
         else:
             info = await get_generic_info(url, platform)
 
@@ -362,7 +447,7 @@ async def get_info(req: InfoRequest):
         msg = str(e).lower()
         if 'private' in msg:
             err = 'This content is private or unavailable.'
-        elif 'age' in msg:
+        elif 'age-restricted' in msg or 'age restricted' in msg or 'confirm your age' in msg:
             err = 'Age-restricted content cannot be downloaded.'
         elif 'login' in msg or 'sign in' in msg:
             err = 'This content requires login. Only public content is supported.'
@@ -387,6 +472,23 @@ async def download_file(
 ):
     platform = detect_platform(url)
 
+    if direct_url:
+        return RedirectResponse(url=direct_url)
+
+    if platform == 'tiktok':
+        try:
+            tk_data = get_tiktok_info(url)
+            for f in tk_data.get('formats', []):
+                if f.get('directUrl'):
+                    if type == 'audio' and f.get('type') == 'audio':
+                        return RedirectResponse(url=f['directUrl'])
+                    elif type != 'audio' and f.get('type') == 'video+audio':
+                        return RedirectResponse(url=f['directUrl'])
+            if tk_data.get('formats') and tk_data['formats'][0].get('directUrl'):
+                return RedirectResponse(url=tk_data['formats'][0]['directUrl'])
+        except Exception:
+            pass
+
     if format:
         resolved_format = format
     elif type == 'audio':
@@ -410,8 +512,9 @@ async def download_file(
         'socket_timeout': 30,
         'retries': 5,
         'geo_bypass': True,
-        'cookiefile': COOKIE_FILE
     }
+    if os.path.exists(COOKIE_FILE):
+        ydl_opts['cookiefile'] = COOKIE_FILE
 
     if start and end:
         try:
