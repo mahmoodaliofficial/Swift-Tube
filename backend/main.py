@@ -125,7 +125,7 @@ def map_format(f: dict) -> dict:
         quality = (height or 0) * 10 + ((fps or 30) / 10)
     elif has_video:
         type_ = 'video'
-        label = f"{height}p {ext.upper()} (video only)" if height else f"{resolution} {ext.upper()}"
+        label = f"{height}p {ext.upper()}" if height else f"{resolution} {ext.upper()}"
         if fps and fps > 30:
             label += f" {fps}fps"
         quality = (height or 0) * 10 + ((fps or 30) / 10)
@@ -347,6 +347,7 @@ def get_tiktok_info(url: str) -> dict:
         raise Exception(res.get('msg', 'Failed to fetch TikTok video'))
 
     data = res['data']
+    hd_video_url = data.get('hdplay')
     video_url = data.get('play') or data.get('wmplay')
     music_url = data.get('music')
     duration = data.get('duration', 0)
@@ -355,11 +356,28 @@ def get_tiktok_info(url: str) -> dict:
     author = data.get('author', {}).get('nickname') or data.get('author', {}).get('unique_id') or 'TikTok User'
 
     formats = []
+    if hd_video_url:
+        formats.append({
+            "formatId": "extreme_hd_nowm",
+            "ext": "mp4",
+            "resolution": "1080p",
+            "fps": 60,
+            "filesize": data.get('hd_size') or data.get('size'),
+            "filesizeApprox": data.get('hd_size') or data.get('size'),
+            "vcodec": "h264",
+            "acodec": "aac",
+            "abr": 192,
+            "tbr": None,
+            "label": "Extreme 1080p Full HD (No Watermark)",
+            "type": "video+audio",
+            "quality": 2000,
+            "directUrl": hd_video_url,
+        })
     if video_url:
         formats.append({
             "formatId": "hd_nowm",
             "ext": "mp4",
-            "resolution": "HD (No Watermark)",
+            "resolution": "720p",
             "fps": 30,
             "filesize": data.get('size'),
             "filesizeApprox": data.get('size'),
@@ -367,7 +385,7 @@ def get_tiktok_info(url: str) -> dict:
             "acodec": "aac",
             "abr": 128,
             "tbr": None,
-            "label": "HD MP4 (No Watermark)",
+            "label": "HD (No Watermark)",
             "type": "video+audio",
             "quality": 1080,
             "directUrl": video_url,
@@ -489,15 +507,23 @@ async def download_file(
         except Exception:
             pass
 
-    if format:
-        resolved_format = format
-    elif type == 'audio':
+    if type == 'audio':
         resolved_format = 'bestaudio[ext=m4a]/bestaudio/best'
+        ext = 'm4a'
+    elif format:
+        resolved_format = f"{format}+bestaudio[ext=m4a]/{format}+bestaudio/{format}/best"
+        ext = 'mp4'
     else:
         max_h = f"[height<={height}]" if height else ""
-        resolved_format = f"best{max_h}[ext=mp4]/b{max_h}/bestvideo{max_h}[ext=mp4]+bestaudio[ext=m4a]/best"
+        resolved_format = (
+            f"bestvideo{max_h}[ext=mp4]+bestaudio[ext=m4a]/"
+            f"bestvideo{max_h}+bestaudio/"
+            f"bestvideo{max_h}+bestaudio[ext=m4a]/"
+            f"best{max_h}[ext=mp4]/"
+            f"best{max_h}/best"
+        )
+        ext = 'mp4'
 
-    ext = 'm4a' if type == 'audio' else 'mp4'
     safe_title = "".join([c if c.isalnum() or c in " -()" else "_" for c in title])[:100]
     filename = f"{safe_title}.{ext}"
 
@@ -512,6 +538,7 @@ async def download_file(
         'socket_timeout': 30,
         'retries': 5,
         'geo_bypass': True,
+        'merge_output_format': 'mp4',
     }
     if os.path.exists(COOKIE_FILE):
         ydl_opts['cookiefile'] = COOKIE_FILE

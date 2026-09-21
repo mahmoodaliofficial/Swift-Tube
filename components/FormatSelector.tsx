@@ -30,8 +30,9 @@ function formatFileSize(bytes: number | null): string {
   return `${bytes} B`;
 }
 
-const QUALITY_HEIGHTS = [2160, 1440, 1080, 720, 480, 360, 240, 144];
+const QUALITY_HEIGHTS = [4320, 2160, 1440, 1080, 720, 480, 360, 240, 144];
 const QUALITY_LABELS: Record<number, string> = {
+  4320: '8K Ultra HD',
   2160: '4K Ultra HD',
   1440: '2K QHD',
   1080: 'Full HD',
@@ -43,6 +44,7 @@ const QUALITY_LABELS: Record<number, string> = {
 };
 
 const QUALITY_COLORS: Record<number, string> = {
+  4320: 'border-fuchsia-500/60 bg-fuchsia-500/10 hover:border-fuchsia-400 shadow-[0_0_15px_rgba(217,70,239,0.2)]',
   2160: 'border-neon-fuchsia/40 bg-neon-fuchsia/5 hover:border-neon-fuchsia/60',
   1440: 'border-blue-500/40 bg-blue-500/5 hover:border-blue-500/60',
   1080: 'border-neon-cyan/40 bg-neon-cyan/5 hover:border-neon-cyan/60',
@@ -129,7 +131,7 @@ export function FormatSelector({ info, onDownload }: FormatSelectorProps) {
             ) : (
               <Star className="h-4 w-4" />
             )}
-            Best Quality Video
+            Extreme Quality (Max 4K/8K)
           </Button>
 
           <Button
